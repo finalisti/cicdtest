@@ -1,3 +1,23 @@
+## Verkot 2: Docker ja kontit
+
+Löysin tämän vanhan projektin jossa käytetään mysql:aa ja päätin tehdä sillä tehtävän.
+
+Aloitin käyttämällä docker init, mutta en saanut sitä millään toimimaan, joten lopulta päädyin poistamaan molemmat dockerfile ja compose tiedostot ja aloittamaan uudestaan.
+
+compose.yaml näyttää tältä:
+![image](./compose.png)
+volumes kohdassa lisään create-db.sql tiedoston sql konttiin jotta se pyörii automaattisesti buildatessa.
+
+ja Dockerfile tältä:
+![image](./Dockerfile.png)
+
+jouduin myös muokkaamaan npm start komentoa koska en jostain syystä saanut buildattua projektia ensin ja sen jälkeen pyörittämään npm start
+![image](./start.png)
+
+suurin ongelma oli saada sql ja node kontit puhumaan toistensa kanssa
+
+Alla projektin alkuperäinen readme tiedosto:
+
 # Simple Node CI/CD demo including integration testing
 
 Tests & code based on <https://github.com/ilkkamtk/integration-testing-ready>
@@ -27,50 +47,50 @@ Testing successful API responses and error handling. The test cases for both sce
 ## Example of setting up a CD pipeline for a Server (e.g. Virtual Machine in Azure)
 
 1. First, make sure you have a server running and you can pull the repository from GitHub (without a need type password) and run the application
-    - Create the database and user for the application
-    - Create and edit `.env` file
-    - Test run app & run tests manually
-    - Use `pm2` to keep the application running, remember to add a name for the application `pm2 start app.js --name node-ci-example`
+   - Create the database and user for the application
+   - Create and edit `.env` file
+   - Test run app & run tests manually
+   - Use `pm2` to keep the application running, remember to add a name for the application `pm2 start app.js --name node-ci-example`
 1. Create a new SSH key pair on the server for authentication using GitHub action
-    - Generate a new key pair with `ssh-keygen -t rsa -b 4096 -m PEM -C "github-actions-node"`
-    - Copy the public key `~/.ssh/id_rsa-github-node.pub` to the server's `~/.ssh/authorized_keys` file
-    - Copy the private key `~/.ssh/id_rsa-github-node` to the repository secrets (use name `PRIVATE_KEY`) in GitHub (_Settings -> Secrets -> Actions -> New repository secret_)
-    - Add other necessary properties to the repository secrets
-      - `HOST`: IP address or domain name of the server
-      - `USERNAME`: your username on the server
+   - Generate a new key pair with `ssh-keygen -t rsa -b 4096 -m PEM -C "github-actions-node"`
+   - Copy the public key `~/.ssh/id_rsa-github-node.pub` to the server's `~/.ssh/authorized_keys` file
+   - Copy the private key `~/.ssh/id_rsa-github-node` to the repository secrets (use name `PRIVATE_KEY`) in GitHub (_Settings -> Secrets -> Actions -> New repository secret_)
+   - Add other necessary properties to the repository secrets
+     - `HOST`: IP address or domain name of the server
+     - `USERNAME`: your username on the server
 1. Create a new action in the `.github/workflows` folder, e.g. `deploy.yml`:
 
-    ```yaml
-    name: Node.js CD
+   ```yaml
+   name: Node.js CD
 
-    # Controls when the action will run. 
-    on:
-      # Triggers the workflow on push or pull request events but only for the main branch
-      push:
-        branches: [ main ]
+   # Controls when the action will run.
+   on:
+     # Triggers the workflow on push or pull request events but only for the main branch
+     push:
+       branches: [main]
 
-    # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-    jobs:
-      # This workflow contains a single job called "deploy"
-      deploy:
-        # The type of runner that the job will run on
-        runs-on: ubuntu-latest
-        # Steps represent a sequence of tasks that will be executed as part of the job
-        steps:
-        - name: Deploy using ssh
-          uses: appleboy/ssh-action@master
-          with:
-            host: ${{ secrets.HOST }}
-            username: ${{ secrets.USERNAME }}
-            key: ${{ secrets.PRIVATE_KEY }}
-            port: 22
-            script: |
-              cd ~/test-ci-node
-              git pull origin main
-              git status
-              npm install
-              npm run test
-              pm2 restart node-ci-example
-    ```
+   # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+   jobs:
+     # This workflow contains a single job called "deploy"
+     deploy:
+       # The type of runner that the job will run on
+       runs-on: ubuntu-latest
+       # Steps represent a sequence of tasks that will be executed as part of the job
+       steps:
+         - name: Deploy using ssh
+           uses: appleboy/ssh-action@master
+           with:
+             host: ${{ secrets.HOST }}
+             username: ${{ secrets.USERNAME }}
+             key: ${{ secrets.PRIVATE_KEY }}
+             port: 22
+             script: |
+               cd ~/test-ci-node
+               git pull origin main
+               git status
+               npm install
+               npm run test
+               pm2 restart node-ci-example
+   ```
 
 1. Test by committing the changes and pushing them to the remote repository, check the status of the action in GitHub
